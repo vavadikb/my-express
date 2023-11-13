@@ -1,16 +1,14 @@
-const http = require('http');
-const fs = require('fs')
-const path = require('path');  
-
-
+const http = require("http");
+const fs = require("fs");
+const path = require("path");
 
 class MyExpress {
     constructor() {
       this.routes = {
         POST: {},
-        GET:{},
-        PUT:{},
-        DELETE:{}
+        GET: {},
+        PUT: {},
+        DELETE: {}
       };
       this.middlewares = [];
     }
@@ -19,24 +17,36 @@ class MyExpress {
       this.middlewares.push(middleware);
     }
   
-    get(path, handler){
-        this.routes.GET[path]= handler
+    addRoute(method, path, handler) {
+      const paramNames = [];
+      const pathRegex = path.replace(/:([^/]+)/g, (match, paramName) => {
+        paramNames.push(paramName);
+        return '([^/]+)';
+      });
+  
+      const regex = new RegExp(`^${pathRegex}$`);
+  
+      this.routes[method][path] = { handler, paramNames, regex };
     }
-
+  
+    get(path, handler) {
+      this.addRoute('GET', path, handler);
+    }
+  
     post(path, handler) {
-      this.routes.POST[path] = handler;
+      this.addRoute('POST', path, handler);
     }
-
-    put(path,handler) {
-        this.routes.PUT[path] = handler
+  
+    put(path, handler) {
+      this.addRoute('PUT', path, handler);
     }
-
-    delete(path,handler) {
-        this.routes.DELETE[path] = handler
+  
+    delete(path, handler) {
+      this.addRoute('DELETE', path, handler);
     }
   
     handleRequest(req, res) {
-      const { url, method, headers } = req;
+      const { url, method } = req;
       const buffer = [];
       req.on('data', (chunk) => {
         buffer.push(chunk);
@@ -49,34 +59,50 @@ class MyExpress {
           middleware(req, res);
         }
   
-        const routeHandler = this.routes[method][url];
-        if (routeHandler) {
-          routeHandler(req, res);
-        } else {
-          res.writeHead(404, { 'Content-Type': 'text/plain' });
-          res.end('Not Found');
+        const routes = this.routes[method];
+
+        for (const routePath in routes) {
+          if (routes.hasOwnProperty(routePath)) {
+            const { handler, paramNames, regex } = routes[routePath];
+            const match = url.match(regex);
+  
+            if (match) {
+              const params = {};
+              paramNames.forEach((paramName, index) => {
+                params[paramName] = match[index + 1];
+              });
+  
+              req.params = params;
+              handler(req, res);
+              return; 
+            }
+          }
         }
+  
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.end('Not Found');
       });
     }
-    
+  
     static(rootPath) {
-        return (req, res, next) => {
-          const filePath = path.join(rootPath, req.url);
-      
-          fs.stat(filePath, (err, stats) => {
-            if (err) {
-              return next();
-            }
-      
-            if (stats.isFile()) {
-              const stream = fs.createReadStream(filePath);
-              stream.pipe(res);
-            } else {
-              return next();
-            }
-          });
-        };
-      }  
+      return (req, res, next) => {
+        const filePath = path.join(rootPath, req.url);
+  
+        fs.stat(filePath, (err, stats) => {
+          if (err) {
+            return next();
+          }
+  
+          if (stats.isFile()) {
+            const stream = fs.createReadStream(filePath);
+            stream.pipe(res);
+          } else {
+            return next();
+          }
+        });
+      };
+    }
+  
     start(port) {
       const server = http.createServer((req, res) => {
         this.handleRequest(req, res);
@@ -88,5 +114,4 @@ class MyExpress {
     }
   }
 
-  
-module.exports = MyExpress
+module.exports = MyExpress;
