@@ -4,6 +4,14 @@ const path = require('path');
 
 class MyExpress {
     constructor() {
+        this.settings = {
+            'view engine': 'pug',
+            'views': './views',
+            'port': 3000,
+            'env': 'development',
+            'case sensitive routing': false,
+            'strict routing': false,
+          };
         this.routes = {
             POST: {},
             GET: {},
@@ -12,6 +20,11 @@ class MyExpress {
         };
         this.middlewares = [];
     }
+
+    set(setting, value) {
+        this.settings[setting] = value;
+    }
+    
 
     use(middleware) {
         this.middlewares.push(middleware);
