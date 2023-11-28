@@ -5,6 +5,15 @@ const app = new MyExpress();
 
 app.use(app.static(path.join(__dirname, 'index.html')));
 
+app.after.use((req, res) => {
+    console.log('AfterMiddleware executed'); // example for after.use() function
+});
+
+app.use((req, res) => {
+    console.log('Middleware executed');
+});
+
+
 
 app.get('/', (req, res) => {});
   app.get('/users/:id', (req, res) => {

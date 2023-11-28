@@ -19,6 +19,8 @@ class MyExpress {
             DELETE: {}
         };
         this.middlewares = [];
+        this.afterMiddlewares = [];
+
     }
 
     set(setting, value) {
@@ -29,6 +31,12 @@ class MyExpress {
     use(middleware) {
         this.middlewares.push(middleware);
     }
+
+    after = {
+        use: (afterMiddleware) => {
+            this.afterMiddlewares.push(afterMiddleware);
+        }
+    };
 
     addRoute(method, path, handler) {
         const paramNames = [];
@@ -115,6 +123,10 @@ class MyExpress {
 
             for (const middleware of this.middlewares) {
                 middleware(req, res);
+            }
+
+            for (const afterMiddleware of this.afterMiddlewares) { // runs after all middlewares 
+                afterMiddleware(req, res);
             }
 
             const routes = this.routes[method];
